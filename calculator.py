@@ -16,3 +16,6 @@ def divide(a, b):
 def complex_calculation(x, y, z):
     result = x + y * z
     return result
+def complex_calculation2(x, y, z):
+    result = x + y * z
+    return result
