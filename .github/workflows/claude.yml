@@ -1,0 +1,133 @@
+name: Claude Code Assistant
+
+# Trigger the workflow when specific events happen
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned]
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  claude-response:
+    # Only run if the comment contains @claude
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+      (github.event_name == 'issues' && contains(github.event.issue.body, '@claude'))
+    
+    runs-on: ubuntu-latest
+    
+    # Required permissions for Claude to work with your repository
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      
+      - name: Run Claude Code Action
+        uses: anthropics/claude-code-action@beta
+        with:
+          # Use OAuth token instead of API key (for Max subscribers)
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          
+          # Optional: Customize trigger phrase (default is @claude)
+          # trigger_phrase: "/claude"
+          
+          # Optional: Limit conversation turns to control costs
+          # max_turns: "5"
+          
+          # Optional: Custom environment variables
+          # claude_env: |
+          #   NODE_ENV: development
+          #   DEBUG: true
+          
+          # Optional: Additional permissions
+          # additional_permissions: "actions:read"
+
+# name: Claude Code Test
+
+# on:
+#   workflow_dispatch:
+#   push:
+#     branches: [main, master]
+
+# jobs:
+#   test-claude:
+#     runs-on: ubuntu-latest
+    
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v4
+        
+#       - name: Setup Node.js
+#         uses: actions/setup-node@v4
+#         with:
+#           node-version: '20'
+          
+#       - name: Check OAuth Token
+#         run: |
+#           if [ -z "${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}" ]; then
+#             echo "ERROR: CLAUDE_CODE_OAUTH_TOKEN is not set in repository secrets"
+#             echo "Please add your OAuth token to repository secrets"
+#             exit 1
+#           else
+#             echo "OAuth token is configured"
+#           fi
+          
+#       - name: Install Claude Code
+#         run: |
+#           echo "Installing Claude Code..."
+#           npm install -g @anthropic-ai/claude-code
+#           echo "Claude Code installed successfully"
+          
+#       - name: Verify Installation
+#         run: |
+#           echo "Verifying Claude Code installation..."
+#           claude --version
+#           echo "Installation verification complete"
+          
+#       - name: Test Authentication
+#         env:
+#           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+#         run: |
+#           echo "Testing authentication..."
+#           echo "console.log('Hello, World!');" > test.js
+#           echo "Testing Claude Code..."
+#           timeout 60 claude "What does this JavaScript code do?" test.js
+#           echo "Claude Code is working correctly!"
+          
+#       - name: Advanced Test
+#         env:
+#           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+#         run: |
+#           echo "Running advanced tests..."
+#           echo "def divide_numbers(a, b):" > buggy_code.py
+#           echo "    return a / b" >> buggy_code.py
+#           echo "" >> buggy_code.py
+#           echo "def main():" >> buggy_code.py
+#           echo "    result = divide_numbers(10, 0)" >> buggy_code.py
+#           echo "    print('Result:', result)" >> buggy_code.py
+#           echo "" >> buggy_code.py
+#           echo "if __name__ == '__main__':" >> buggy_code.py
+#           echo "    main()" >> buggy_code.py
+#           echo "Created test file with intentional bug"
+#           timeout 60 claude "Review this Python code and identify any potential issues" buggy_code.py
+#           echo "Advanced test completed successfully!"
+          
+#       - name: Test Summary
+#         run: |
+#           echo "All tests completed!"
+#           echo "Claude Code is properly integrated with GitHub Actions"
+#           echo "You can now use Claude Code in your workflows"
