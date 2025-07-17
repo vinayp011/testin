@@ -16,7 +16,10 @@
       "Bash(gh repo sync:*)",
       "Bash(gh workflow:*)",
       "Bash(gh run list:*)",
-      "Bash(gh secret:*)"
+      "Bash(gh secret:*)",
+      "Bash(git pull:*)",
+      "Bash(gh api:*)",
+      "Bash(gh run view:*)"
     ],
     "deny": []
   }
