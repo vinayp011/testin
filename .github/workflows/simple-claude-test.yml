@@ -1,22 +1,16 @@
-name: Claude Code Integration
+name: Claude Code Test
 
 on:
   workflow_dispatch:
   push:
     branches: [main, master]
-  pull_request:
-    types: [opened, synchronize]
-  issues:
-    types: [opened]
-  issue_comment:
-    types: [created]
 
 jobs:
-  claude-code:
+  test-claude:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
         
       - name: Setup Node.js
@@ -24,183 +18,58 @@ jobs:
         with:
           node-version: '20'
           
-      - name: Check if OAuth token exists
+      - name: Check OAuth Token
         run: |
           if [ -z "${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}" ]; then
-            echo "❌ CLAUDE_CODE_OAUTH_TOKEN is not set in repository secrets"
+            echo "ERROR: CLAUDE_CODE_OAUTH_TOKEN is not set in repository secrets"
+            echo "Please add your OAuth token to repository secrets"
             exit 1
           else
-            echo "✅ OAuth token found"
+            echo "OAuth token is configured"
           fi
           
       - name: Install Claude Code
         run: |
           echo "Installing Claude Code..."
           npm install -g @anthropic-ai/claude-code
-          echo "✅ Claude Code installed"
+          echo "Claude Code installed successfully"
           
-      - name: Verify Claude Code installation
+      - name: Verify Installation
         run: |
-          echo "Checking Claude Code version..."
-          claude --version || echo "Version check failed"
-          claude --help || echo "Help command failed"
+          echo "Verifying Claude Code installation..."
+          claude --version
+          echo "Installation verification complete"
           
-      - name: Test OAuth authentication
+      - name: Test Authentication
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: |
-          echo "Testing OAuth authentication..."
-          # Test basic authentication
-          timeout 30 claude "Say hello" || echo "Authentication test failed or timed out"
+          echo "Testing authentication..."
+          echo "console.log('Hello, World!');" > test.js
+          echo "Testing Claude Code..."
+          timeout 60 claude "What does this JavaScript code do?" test.js
+          echo "Claude Code is working correctly!"
           
-      - name: Code Review Test
+      - name: Advanced Test
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: |
-          echo "Creating test files for Claude to review..."
+          echo "Running advanced tests..."
+          echo "def divide_numbers(a, b):" > buggy_code.py
+          echo "    return a / b" >> buggy_code.py
+          echo "" >> buggy_code.py
+          echo "def main():" >> buggy_code.py
+          echo "    result = divide_numbers(10, 0)" >> buggy_code.py
+          echo "    print('Result:', result)" >> buggy_code.py
+          echo "" >> buggy_code.py
+          echo "if __name__ == '__main__':" >> buggy_code.py
+          echo "    main()" >> buggy_code.py
+          echo "Created test file with intentional bug"
+          timeout 60 claude "Review this Python code and identify any potential issues" buggy_code.py
+          echo "Advanced test completed successfully!"
           
-          # Create a Python file with some issues
-          cat > test_code.py << 'EOF'
-def calculate_area(radius):
-    pi = 3.14159
-    area = pi * radius * radius
-    return area
-
-def main():
-    r = input("Enter radius: ")
-    result = calculate_area(r)
-    print("Area is:", result)
-
-if __name__ == "__main__":
-    main()
-EOF
-          
-          # Create a JavaScript file
-          cat > test_code.js << 'EOF'
-function getUserData(userId) {
-    fetch('/api/user/' + userId)
-        .then(response => response.json())
-        .then(data => {
-            console.log(data);
-            document.getElementById('user-name').innerHTML = data.name;
-        });
-}
-
-var users = [];
-for (var i = 0; i < 100; i++) {
-    users.push({id: i, name: 'User ' + i});
-}
-EOF
-          
-          echo "Files created. Testing Claude Code review..."
-          
-          # Test Python file review
-          echo "🔍 Reviewing Python file..."
-          timeout 45 claude "Review this Python code for bugs, best practices, and suggest improvements" test_code.py || echo "Python review failed or timed out"
-          
-          # Test JavaScript file review
-          echo "🔍 Reviewing JavaScript file..."
-          timeout 45 claude "Review this JavaScript code for potential issues and modern best practices" test_code.js || echo "JavaScript review failed or timed out"
-          
-      - name: Test Directory Analysis
-        env:
-          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      - name: Test Summary
         run: |
-          echo "Testing directory analysis..."
-          mkdir -p src/components
-          
-          # Create a React component with issues
-          cat > src/components/UserProfile.jsx << 'EOF'
-import React, { useState, useEffect } from 'react';
-
-function UserProfile({ userId }) {
-    const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
-    
-    useEffect(() => {
-        fetchUser();
-    }, []);
-    
-    const fetchUser = async () => {
-        try {
-            const response = await fetch(`/api/users/${userId}`);
-            const userData = await response.json();
-            setUser(userData);
-            setLoading(false);
-        } catch (error) {
-            console.log('Error fetching user:', error);
-            setLoading(false);
-        }
-    };
-    
-    if (loading) return <div>Loading...</div>;
-    
-    return (
-        <div>
-            <h2>{user.name}</h2>
-            <p>Email: {user.email}</p>
-            <p>Phone: {user.phone}</p>
-        </div>
-    );
-}
-
-export default UserProfile;
-EOF
-          
-          echo "🔍 Analyzing React component..."
-          timeout 45 claude "Analyze this React component for potential issues, performance optimizations, and best practices" src/components/UserProfile.jsx || echo "React analysis failed or timed out"
-          
-      - name: Test Project Structure Analysis
-        env:
-          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-        run: |
-          echo "Testing project structure analysis..."
-          
-          # Create a package.json
-          cat > package.json << 'EOF'
-{
-  "name": "test-project",
-  "version": "1.0.0",
-  "description": "Test project for Claude Code",
-  "main": "index.js",
-  "scripts": {
-    "start": "node index.js",
-    "test": "jest"
-  },
-  "dependencies": {
-    "express": "^4.18.0",
-    "lodash": "^4.17.21"
-  },
-  "devDependencies": {
-    "jest": "^29.0.0"
-  }
-}
-EOF
-          
-          # Create README
-          cat > README.md << 'EOF'
-# Test Project
-
-This is a test project for Claude Code integration.
-
-## Installation
-
-```bash
-npm install
-```
-
-## Usage
-
-```bash
-npm start
-```
-EOF
-          
-          echo "🔍 Analyzing project structure..."
-          timeout 45 claude "Analyze this project structure and suggest improvements for organization, dependencies, and documentation" . || echo "Project analysis failed or timed out"
-          
-      - name: Final Status Report
-        run: |
-          echo "🎉 Claude Code workflow completed!"
-          echo "Check the logs above to see Claude's responses."
-          echo "If you see responses from Claude, the integration is working correctly."
+          echo "All tests completed!"
+          echo "Claude Code is properly integrated with GitHub Actions"
+          echo "You can now use Claude Code in your workflows"
